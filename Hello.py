@@ -1,51 +1,124 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import streamlit as st
-from streamlit.logger import get_logger
+from streamlit_folium import folium_static
+import pandas as pd
+from sklearn.cluster import DBSCAN
+from geopy.distance import great_circle
+import folium
+import datetime as datetime
+import requests
+from bs4 import BeautifulSoup
+import re
 
-LOGGER = get_logger(__name__)
+
+###Scrapping data
+#Website links
+#url = "https://www.data.gov.uk/dataset/cb7ae6f0-4be6-4935-9277-47e5ce24a11f/road-safety-data"
+
+##Defining functions
+#Check that the website is allowed for acces
+#<Response [200]>#means able to access
+@st.cache_data
+def check_acess(url):
+    response = requests.get(url)
+    if response.status_code == 200:
+        notification = "Access to URL is granted!"
+    else:
+        notification = "Access to URL is denied!, please input a different link!"
+    return notification    
+                  
+
+#Load all available csv from url and list out all dataset names
+@st.cache_data
+def load_dataset(html):
+    html = requests.get(url)    
+    #parse html info
+    soup = BeautifulSoup(html.text, 'html.parser')
+
+    #extract all links available from html
+    links = []
+    for i in soup.find_all('a'):
+        link = i.get('href')
+        links.append(link)
+
+    #Only keeps the csv ones 
+    links_csv = []
+    for i in links:
+        if "csv" in i:
+            links_csv.append(i)       
+    
+    name_csv = []
+    spans = soup.find_all("span", {"class": "visually-hidden"})
+    for span in spans:
+        text = span.text.strip()  # Remove leading/trailing whitespaces
+        if "CSV '" in text and "', Dataset:" in text:
+            name = text.split("CSV '", 1)[1].split("', Dataset:", 1)[0].strip()  # Split the string at "CSV             name = text.split("CSV '", 1)[1].split("' , Dataset:", 1)[0].strip()  # Split the string at "CSV" and take the second part
+            if name:  # Only append the name to the list if it's not an empty string
+                name_csv.append(name)
+
+    df = pd.DataFrame(list(zip(name_csv, links_csv)), columns=['Name', 'links']).sort_values(by=['Name'])       
+    #Save it as a table
+    #links_df = pd.DataFrame({'links':links_csv}).sort_values(by=['links'])  
+    return df
+
+@st.cache_data
+def display_dataset(df):
+    dataset_name = df['Name']
+    return dataset_name
+
+def get_data(links_df):    
+    #Filter to keep only the tables I need
+    donwnload_list = links_df[links_df.links.str.contains('statistics-casualty-2')].reset_index(drop=True)
+    #use regex to extract the year from url
+    donwnload_list['year'] = donwnload_list['links'].str.extract(r'(\d{4})')
+
+    #Save the dataset as dictionary
+    accidents = {}
+    for index, row in donwnload_list.iterrows():
+        accidents[row['year']] = pd.read_csv(row['links'], low_memory=False)
+
+    full_df = accidents
+    
+    return full_df
 
 
-def run():
-    st.set_page_config(
-        page_title="Hello",
-        page_icon="👋",
+####App
+##Title
+st.header("UK Fatal RTA visualisation tool")
+
+##User Input
+#User can input a link
+url = st.text_input('URL:')
+
+
+#Call back function
+def selected_csv(df):
+    st.session_state.selected_rows = df[df['tick box'] == True]
+    
+#Display whether we can webscrap from this link
+if url:
+    #User has inputted a URL
+    st.write(check_acess(url))
+    csv_df = pd.DataFrame(display_dataset(load_dataset(url)))
+    csv_df['tick box'] = False
+    #st.dataframe(display_dataset(load_dataset(url)))
+    st.data_editor(
+        csv_df,
+        column_config={
+            "tick box": st.column_config.CheckboxColumn(
+                "Use:",
+                help = "Select the datasets you would like to use",
+                default=False
+            )
+        },
+        disabled=["widgets"],
+        hide_index=True,
     )
-
-    st.write("# Welcome to Streamlit! 👋")
-
-    st.sidebar.success("Select a demo above.")
-
-    st.markdown(
-        """
-        Streamlit is an open-source app framework built specifically for
-        Machine Learning and Data Science projects.
-        **👈 Select a demo from the sidebar** to see some examples
-        of what Streamlit can do!
-        ### Want to learn more?
-        - Check out [streamlit.io](https://streamlit.io)
-        - Jump into our [documentation](https://docs.streamlit.io)
-        - Ask a question in our [community
-          forums](https://discuss.streamlit.io)
-        ### See more complex demos
-        - Use a neural net to [analyze the Udacity Self-driving Car Image
-          Dataset](https://github.com/streamlit/demo-self-driving)
-        - Explore a [New York City rideshare dataset](https://github.com/streamlit/demo-uber-nyc-pickups)
-    """
-    )
+    #####Not quite sure about this part######
+    if 'selected_rows' in st.session_state:
+        st.dataframe(st.session_state.selected_rows)
+    ##########################################    
+else:
+    # The user has not inputted a URL    
+    st.write("Please input an URL above")
 
 
-if __name__ == "__main__":
-    run()
