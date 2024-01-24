@@ -3,3 +3,8 @@ numpy
 pandas
 pydeck
 streamlit
+sklearn
+datetime
+requests
+bs4
+re
