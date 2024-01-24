@@ -101,7 +101,7 @@ if url:
     csv_df = pd.DataFrame(display_dataset(load_dataset(url)))
     csv_df['tick box'] = False
     #st.dataframe(display_dataset(load_dataset(url)))
-    st.data_editor(
+    edited_df = st.data_editor(
         csv_df,
         column_config={
             "tick box": st.column_config.CheckboxColumn(
@@ -113,6 +113,7 @@ if url:
         disabled=["widgets"],
         hide_index=True,
     )
+    selected_csv(edited_df)
     #####Not quite sure about this part######
     if 'selected_rows' in st.session_state:
         st.dataframe(st.session_state.selected_rows)
