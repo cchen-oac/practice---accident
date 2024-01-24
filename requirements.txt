@@ -3,7 +3,7 @@ numpy
 pandas
 pydeck
 streamlit
-sklearn
+scikit-learn
 datetime
 requests
 bs4
