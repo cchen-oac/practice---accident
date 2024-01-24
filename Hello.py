@@ -1,13 +1,13 @@
 import streamlit as st
 #from streamlit_folium import folium_static
 import pandas as pd
-from sklearn.cluster import DBSCAN
-from geopy.distance import great_circle
-import folium
+#from sklearn.cluster import DBSCAN
+#from geopy.distance import great_circle
+#import folium
 import datetime as datetime
 import requests
 from bs4 import BeautifulSoup
-import re
+#import re
 
 
 ###Scrapping data
