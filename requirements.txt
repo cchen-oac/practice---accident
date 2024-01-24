@@ -5,6 +5,6 @@ streamlit
 scikit-learn
 datetime
 requests
-BeautifulSoup4
+BeautifulSoup4==4.12.2
 re
 
