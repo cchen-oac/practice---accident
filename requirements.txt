@@ -8,4 +8,3 @@ datetime
 requests
 bs4
 re
-beautifulsoup4==4.12.2
