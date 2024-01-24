@@ -51,11 +51,11 @@ def load_dataset(html):
     for span in spans:
         text = span.text.strip()  # Remove leading/trailing whitespaces
         if "CSV '" in text and "', Dataset:" in text:
-            name = text.split("CSV '", 1)[1].split("', Dataset:", 1)[0].strip()  # Split the string at "CSV             name = text.split("CSV '", 1)[1].split("' , Dataset:", 1)[0].strip()  # Split the string at "CSV" and take the second part
+            name = text.split("CSV '", 1)[1].split("', Dataset:", 1)[0].strip()  # Split the string at "CSV            
             if name:  # Only append the name to the list if it's not an empty string
                 name_csv.append(name)
 
-    df = pd.DataFrame(list(zip(name_csv, links_csv)), columns=['Name', 'links']).sort_values(by=['Name'])       
+    df = pd.DataFrame(list(zip(name_csv, links_csv)), columns=['Name', 'links']).sort_values(by=['Name']).reset_index(drop=True)  
     #Save it as a table
     #links_df = pd.DataFrame({'links':links_csv}).sort_values(by=['links'])  
     return df
@@ -65,6 +65,7 @@ def display_dataset(df):
     dataset_name = df['Name']
     return dataset_name
 
+@st.cache_data
 def get_data(links_df):    
     #Filter to keep only the tables I need
     donwnload_list = links_df[links_df.links.str.contains('statistics-casualty-2')].reset_index(drop=True)
@@ -89,7 +90,7 @@ st.header("UK Fatal RTA visualisation tool")
 #User can input a link
 url = st.text_input('URL:')
 
-
+@st.cache_data
 #Call back function
 def selected_csv(df):
     st.session_state.selected_rows = df[df['tick box'] == True]
@@ -113,11 +114,16 @@ if url:
         disabled=["widgets"],
         hide_index=True,
     )
+
     selected_csv(edited_df)
     #####Not quite sure about this part######
     if 'selected_rows' in st.session_state:
         st.dataframe(st.session_state.selected_rows)
-    ##########################################    
+    ##########################################
+
+    selected_csv = df[7:9]    
+    selected_csv.merge(df, on='Name')
+
 else:
     # The user has not inputted a URL    
     st.write("Please input an URL above")
