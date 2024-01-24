@@ -66,20 +66,14 @@ def display_dataset(df):
     return dataset_name
 
 @st.cache_data
-def get_data(links_df):    
-    #Filter to keep only the tables I need
-    donwnload_list = links_df[links_df.links.str.contains('statistics-casualty-2')].reset_index(drop=True)
-    #use regex to extract the year from url
-    donwnload_list['year'] = donwnload_list['links'].str.extract(r'(\d{4})')
+def get_data(selected_rows):
+    # Save the dataset as a dictionary
+    downloaded_data = {}
+    for Name in selected_rows['Name']:
+        csv_url = selected_rows.loc[selected_rows['Name'] == Name, 'links'].values[0]
+        downloaded_data[Name] = pd.read_csv(csv_url, low_memory=False)
 
-    #Save the dataset as dictionary
-    accidents = {}
-    for index, row in donwnload_list.iterrows():
-        accidents[row['year']] = pd.read_csv(row['links'], low_memory=False)
-
-    full_df = accidents
-    
-    return full_df
+    return downloaded_data
 
 
 ####App
@@ -94,38 +88,27 @@ url = st.text_input('URL:')
 #Call back function
 def selected_csv(df):
     st.session_state.selected_rows = df[df['tick box'] == True]
-    
+     
+
+
 #Display whether we can webscrap from this link
 if url:
-    #User has inputted a URL
-    st.write(check_acess(url))
-    csv_df = pd.DataFrame(display_dataset(load_dataset(url)))
-    csv_df['tick box'] = False
-    #st.dataframe(display_dataset(load_dataset(url)))
-    edited_df = st.data_editor(
-        csv_df,
-        column_config={
-            "tick box": st.column_config.CheckboxColumn(
-                "Use:",
-                help = "Select the datasets you would like to use",
-                default=False
-            )
-        },
-        disabled=["widgets"],
-        hide_index=True,
-    )
+  #User has inputted a URL
+  st.write(check_acess(url))
+  full_df = load_dataset(url)
+  csv_df = pd.DataFrame(display_dataset(full_df))
 
-    selected_csv(edited_df)
-    #####Not quite sure about this part######
-    if 'selected_rows' in st.session_state:
-        st.dataframe(st.session_state.selected_rows)
-    ##########################################
+  # Let the user select from the dataframe indices
+  selected_names = st.multiselect('Select rows:', full_df.Name)
+  selected_rows = full_df[full_df['Name'].isin(selected_names)]
 
-    selected_csv = df[7:9]    
-    selected_csv.merge(df, on='Name')
+  # Display the selected rows
+  st.write('### Selected Rows')
+  st.dataframe(selected_rows)
+  downloaded_data = get_data(selected_rows)
+  downloaded_data
+  #downloaded_data[downloaded_data['Name'].isin(selected_names)]
 
 else:
     # The user has not inputted a URL    
-    st.write("Please input an URL above")
-
-
+  st.write("Please input an URL above")
